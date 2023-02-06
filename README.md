@@ -1,0 +1,2 @@
+# ParametricBin
+Parametric bin generator
