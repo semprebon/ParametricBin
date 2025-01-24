@@ -1,3 +1,5 @@
+include <OpenScadLibraries/Association.scad>
+
 // Parametric Bins
 
 // Inside dimensions of drawer (mm) in large Korean medicine chest: 202 x 120.5 x 72
@@ -14,7 +16,8 @@ LENGTH = 87; // two trays per layer
 HEIGHT = 40; // 1 trays high in drawer
 WIDTH = 69; // 1 tray across
 
-LABEL_WIDTH = 12.5;
+//LABEL_WIDTH = 12.5;
+LABEL_WIDTH = 0;
 
 THICKNESS = 1.6;
 BEVEL = 2.4;
@@ -90,13 +93,35 @@ module mesh_cutter(size, hole_size=2, solid_size) {
     }
 }
 
+/**
+ Creates a square array of diamond-shaped prisms that fit into a cube of the
+ specified size. The prisms are parallel to the x-axis. The bounding cube is
+ centered on the z axis and rises up from the x/y plane.
+*/
+module diagonal_mesh_cutter(size, hole_size=2, solid_size) {
+    new_size_2d = ((size.x+size.z)/sqrt(2) * [1,1,0]);
+    new_size = new_size_2d + [0,0,size.y];
+    echo("diagonal_mesh_cutter: ", size=size, new_size_2d=new_size_2d, new_size=new_size);
+    translate([0,0,size.z/2]) intersection() {
+        rotate([0,90,0])
+            rotate([0,0,45]) translate([0,0,-new_size.z/2]) mesh_cutter(new_size, hole_size, solid_size);
+        cube(size, center=true);
+    }
+}
+
 module compartment_cutter(size) {
-        translate([0,0,THICKNESS]) beveled_block([size.x, size.y, 2*size.y], bevel=BEVEL);
-        translate([0,0,-SLOP]) mesh_cutter([size.x, size.y-THICKNESS, 2*size.y], hole_size=3, solid_size=THICKNESS);
+    echo("compartment_cutter: ", size=size);
+    translate([0,0,THICKNESS]) beveled_block([size.x, size.y, 2*size.y], bevel=BEVEL);
+    translate([0,0,-SLOP]) mesh_cutter([size.x, size.y-THICKNESS, 2*size.y],
+        hole_size=4, solid_size=1);
+    translate([size.x/2,0,BEVEL+THICKNESS]) {
+        diagonal_mesh_cutter([size.x, size.y-THICKNESS, size.z-2*BEVEL-THICKNESS],
+            hole_size=4, solid_size=1);
+    }
 }
 
 module basic_tray(size) {
-    bin_size = [ size.x-2*THICKNESS, size.y - 2*THICKNESS ];
+    bin_size = [ size.x-2*THICKNESS, size.y - 2*THICKNESS, size.z ];
     label_pad(size, LABEL_WIDTH);
     stacking_block(size) {
         translate([0,0,0]) compartment_cutter(bin_size);
@@ -133,17 +158,24 @@ module quad_tray(size) {
     }
 }
 
-//translate([LENTH/2,0,0]) cube([LENGTH, WIDTH, HEIGHT]);
+//translate([LENGTH/2,0,0]) cube([LENGTH, WIDTH, HEIGHT]);
 //beveled_block([LENGTH, WIDTH, HEIGHT], bevel=BEVEL);
 
 //stacking_block([LENGTH, WIDTH, HEIGHT]);
 //divided_tray2([WIDTH, LENGTH, HEIGHT]);
 //label_pad([10, LENGTH, 10]);
-basic_tray([LENGTH, WIDTH, HEIGHT]);
+//basic_tray([LENGTH, WIDTH, HEIGHT]);
+// time with mesh: 45s;  no mesh: 0s
+
+//diagonal_mesh_cutter(size=[LENGTH, WIDTH, HEIGHT], hole_size=3, solid_size=2);
 //quad_tray([WIDTH, LENGTH, HEIGHT]);
 //divided_tray([WIDTH, LENGTH, HEIGHT]);
 //divided_tray([25, 20, 7]);
 
+// Pencil holder
+// with side, bottom mesh: render: 2:22; print: 10:22:00, $1.39
+// with just bottom mesh: render: 0:02; print: 9:16:00, $1.69
+basic_tray([30,40,40]);
 
 //gap = 2;
 //size = 2;
